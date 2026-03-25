@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>City Metro — Alerts Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<script>
+  const API_BASE = 'https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev';
+</script>
+
+<style>
+  :root {
+    --bg: #0f172a;
+    --sidebar: #0a0f1e;
+    --surface: #1e293b;
+    --surface2: #263348;
+    --border: #334155;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --faint: #475569;
+    --accent: #3b82f6;
+    --accent-h: #2563eb;
+
+    --operational: #22c55e;
+    --degraded:    #eab308;
+    --major:       #f97316;
+    --critical:    #ef4444;
+    --emergency:   #b91c1c;
+    --maintenance: #a855f7;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Barlow', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── LOGIN ───────────────────────────────────────────────── */
+  #loginScreen {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0a0f1e 0%, #0f172a 60%, #1e1b4b 100%);
+  }
+
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px;
+    width: 100%;
+    max-width: 380px;
+  }
+
+  .login-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .logo-mark {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .logo-mark svg { width: 26px; height: 26px; }
+
+  .logo-text-wrap { line-height: 1; }
+  .logo-city { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 18px; letter-spacing: 2px; text-transform: uppercase; }
+  .logo-sub  { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 11px; color: var(--accent); letter-spacing: 3px; text-transform: uppercase; }
+
+  .login-title { font-size: 15px; color: var(--muted); margin-bottom: 24px; }
+
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 12px; font-weight: 600; letter-spacing: .5px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; }
+
+  .form-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: 'Barlow', sans-serif;
+    outline: none;
+    transition: border-color .15s;
+  }
+
+  .form-input:focus { border-color: var(--accent); }
+  .form-input::placeholder { color: var(--faint); }
+
+  .btn-primary {
+    width: 100%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 11px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Barlow', sans-serif;
+    cursor: pointer;
+    transition: background .15s;
+    margin-top: 8px;
+  }
+  .btn-primary:hover { background: var(--accent-h); }
+
+  .login-err { color: var(--critical); font-size: 13px; margin-top: 10px; display: none; }
+
+  /* ── APP SHELL ───────────────────────────────────────────── */
+  #app { display: none; flex-direction: column; min-height: 100vh; }
+
+  /* ── TOPBAR ──────────────────────────────────────────────── */
+  .topbar {
+    height: 60px;
+    background: var(--sidebar);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 16px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .topbar-logo { display: flex; align-items: center; gap: 10px; }
+  .topbar-badge {
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    text-transform: uppercase;
+  }
+
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+
+  .topbar-btn {
+    font-size: 13px;
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--border);
+    padding: 5px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Barlow', sans-serif;
+    transition: all .15s;
+    text-decoration: none;
+  }
+  .topbar-btn:hover { color: var(--text); border-color: #475569; }
+
+  /* ── LAYOUT ──────────────────────────────────────────────── */
+  .layout { display: flex; flex: 1; }
+
+  .sidebar {
+    width: 220px;
+    background: var(--sidebar);
+    border-right: 1px solid var(--border);
+    padding: 20px 12px;
+    flex-shrink: 0;
+  }
+
+  .nav-section { margin-bottom: 8px; }
+  .nav-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--faint);
+    padding: 0 12px;
+    margin-bottom: 4px;
+    display: block;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .15s;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    font-family: 'Barlow', sans-serif;
+  }
+
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: rgba(59,130,246,.15); color: var(--accent); }
+  .nav-item .nav-icon { font-size: 16px; flex-shrink: 0; }
+  .nav-badge { margin-left: auto; background: var(--accent); color: white; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; }
+  .nav-badge.red { background: var(--critical); }
+
+  .main { flex: 1; overflow-y: auto; padding: 28px 32px; }
+
+  /* ── PAGE HEADER ─────────────────────────────────────────── */
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+
+  .page-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  /* ── BUTTONS ─────────────────────────────────────────────── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Barlow', sans-serif;
+    cursor: pointer;
+    border: none;
+    transition: all .15s;
+  }
+
+  .btn-blue   { background: var(--accent); color: white; }
+  .btn-blue:hover { background: var(--accent-h); }
+  .btn-ghost  { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: #475569; }
+  .btn-red    { background: rgba(239,68,68,.15); color: var(--critical); border: 1px solid rgba(239,68,68,.3); }
+  .btn-red:hover { background: rgba(239,68,68,.25); }
+  .btn-green  { background: rgba(34,197,94,.15); color: var(--operational); border: 1px solid rgba(34,197,94,.3); }
+  .btn-green:hover { background: rgba(34,197,94,.25); }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+  /* ── TABLE ───────────────────────────────────────────────── */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:last-child { border-bottom: 0; }
+  tbody tr:hover { background: rgba(255,255,255,.02); }
+
+  td { padding: 14px 16px; font-size: 13px; vertical-align: top; }
+
+  .td-title { font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .td-desc  { font-size: 12px; color: var(--muted); }
+  .td-time  { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--faint); }
+  .td-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* ── BADGES ──────────────────────────────────────────────── */
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+
+  .badge-minor     { background: rgba(234,179,8,.15);  color: var(--degraded); }
+  .badge-major     { background: rgba(249,115,22,.15); color: var(--major); }
+  .badge-critical  { background: rgba(239,68,68,.15);  color: var(--critical); }
+  .badge-emergency { background: var(--emergency); color: white; }
+
+  .badge-investigating { background: rgba(249,115,22,.15); color: var(--major); }
+  .badge-identified    { background: rgba(234,179,8,.15);  color: var(--degraded); }
+  .badge-monitoring    { background: rgba(59,130,246,.15); color: var(--accent); }
+  .badge-resolved      { background: rgba(34,197,94,.15);  color: var(--operational); }
+
+  .badge-scheduled    { background: rgba(168,85,247,.15); color: var(--maintenance); }
+  .badge-in_progress  { background: var(--maintenance); color: white; }
+  .badge-completed    { background: rgba(34,197,94,.15); color: var(--operational); }
+  .badge-cancelled    { background: rgba(100,116,139,.15); color: var(--muted); }
+
+  .line-dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    margin-right: 6px;
+    flex-shrink: 0;
+  }
+
+  /* ── MODAL ───────────────────────────────────────────────── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.7);
+    z-index: 200;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 16px;
+    overflow-y: auto;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 580px;
+    flex-shrink: 0;
+  }
+
+  .modal-header {
+    padding: 20px 24px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: .5px;
+  }
+
+  .modal-close {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--muted);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .modal-close:hover { background: var(--surface2); color: var(--text); }
+
+  .modal-body { padding: 20px 24px; }
+
+  .modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-row.three { grid-template-columns: 1fr 1fr 1fr; }
+
+  select.form-input { cursor: pointer; }
+
+  textarea.form-input { resize: vertical; min-height: 80px; }
+
+  .form-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin: 16px 0 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── LINE SELECT ─────────────────────────────────────────── */
+  .line-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .line-pick-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    transition: all .12s;
+    user-select: none;
+  }
+
+  .line-pick-item.selected { border-color: currentColor; color: white; }
+
+  /* ── WAYPOINT SELECT ─────────────────────────────────────── */
+  .waypoint-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+    max-height: 120px;
+    overflow-y: auto;
+    padding: 4px;
+  }
+
+  .wp-item {
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .1s;
+    user-select: none;
+  }
+
+  .wp-item.selected { background: rgba(59,130,246,.2); border-color: var(--accent); color: var(--accent); }
+
+  /* ── UPDATE TIMELINE ─────────────────────────────────────── */
+  .update-timeline {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .ut-entry {
+    display: flex;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    align-items: flex-start;
+  }
+
+  .ut-entry:last-child { border-bottom: 0; }
+  .ut-time { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--faint); padding-top: 2px; flex-shrink: 0; white-space: nowrap; }
+  .ut-msg  { font-size: 13px; color: var(--muted); }
+
+  /* ── STATS ROW ───────────────────────────────────────────── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+  }
+
+  .stat-value { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 700; }
+  .stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* ── LINES EDITOR ────────────────────────────────────────── */
+  .line-editor-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 8px;
+  }
+
+  .color-dot { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; border: 2px solid var(--border); cursor: pointer; }
+
+  .wp-tags { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
+  .wp-tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--bg); border: 1px solid var(--border); color: var(--muted); display: flex; align-items: center; gap: 4px; }
+  .wp-tag-del { cursor: pointer; color: var(--faint); font-size: 14px; line-height: 1; }
+  .wp-tag-del:hover { color: var(--critical); }
+
+  /* ── EMPTY ───────────────────────────────────────────────── */
+  .empty { text-align: center; padding: 48px 24px; color: var(--faint); }
+  .empty-icon { font-size: 36px; margin-bottom: 8px; }
+
+  /* ── TOAST ───────────────────────────────────────────────── */
+  #toast {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: var(--text);
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 300;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all .3s;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  }
+
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.success { border-color: rgba(34,197,94,.4); color: var(--operational); }
+  #toast.error   { border-color: rgba(239,68,68,.4); color: var(--critical); }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .main { padding: 20px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ─── LOGIN ──────────────────────────────────────────────────────────── -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 26 26" fill="none"><path d="M3 22V6L7 6L13 16L19 6H23V22H19V12L13 21L7 12V22H3Z" fill="white"/></svg>
+      </div>
+      <div class="logo-text-wrap">
+        <div class="logo-city">City Metro</div>
+        <div class="logo-sub">Alerts Admin</div>
+      </div>
+    </div>
+    <div class="login-title">Enter your admin secret to continue.</div>
+    <div class="form-group">
+      <label class="form-label">Admin Secret</label>
+      <input class="form-input" type="password" id="loginSecret" placeholder="••••••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-primary" onclick="doLogin()">Sign In</button>
+    <div class="login-err" id="loginErr">Invalid secret. Please try again.</div>
+  </div>
+</div>
+
+<!-- ─── APP ────────────────────────────────────────────────────────────── -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="logo-mark" style="width:34px;height:34px;border-radius:8px">
+        <svg viewBox="0 0 26 26" fill="none" style="width:20px;height:20px"><path d="M3 22V6L7 6L13 16L19 6H23V22H19V12L13 21L7 12V22H3Z" fill="white"/></svg>
+      </div>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;letter-spacing:2px;margin-left:6px">CITY METRO</span>
+      <span class="topbar-badge">ADMIN</span>
+    </div>
+    <div class="topbar-right">
+      <a href="index.html" class="topbar-btn" target="_blank">View Public Page ↗</a>
+      <button class="topbar-btn" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <nav class="sidebar">
+      <div class="nav-section">
+        <span class="nav-section-label">Operations</span>
+        <button class="nav-item active" id="nav-incidents" onclick="showTab('incidents')">
+          <span class="nav-icon">🚨</span> Incidents
+          <span class="nav-badge red" id="nb-incidents">0</span>
+        </button>
+        <button class="nav-item" id="nav-maintenance" onclick="showTab('maintenance')">
+          <span class="nav-icon">🔧</span> Maintenance
+          <span class="nav-badge" id="nb-maintenance">0</span>
+        </button>
+      </div>
+      <div class="nav-section" style="margin-top:8px">
+        <span class="nav-section-label">Configuration</span>
+        <button class="nav-item" id="nav-lines" onclick="showTab('lines')">
+          <span class="nav-icon">🚇</span> Lines
+        </button>
+        <button class="nav-item" id="nav-subscribers" onclick="showTab('subscribers')">
+          <span class="nav-icon">📧</span> Subscribers
+          <span class="nav-badge" id="nb-subs">0</span>
+        </button>
+      </div>
+    </nav>
+
+    <main class="main" id="mainContent">
+      <!-- Tabs rendered here -->
+    </main>
+  </div>
+</div>
+
+<!-- ─── MODALS ──────────────────────────────────────────────────────────── -->
+
+<!-- Incident Modal -->
+<div class="modal-overlay" id="incidentModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="incidentModalTitle">New Incident</span>
+      <button class="modal-close" onclick="closeModal('incidentModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="inc_id">
+      <div class="form-group">
+        <label class="form-label">Title *</label>
+        <input class="form-input" id="inc_title" placeholder="Brief description of the issue">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-input" id="inc_description" placeholder="Detailed information..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Severity Level *</label>
+          <select class="form-input" id="inc_level">
+            <option value="minor">⚠️ Minor</option>
+            <option value="major">🔴 Major</option>
+            <option value="critical">🚨 Critical</option>
+            <option value="emergency">🆘 Emergency</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status *</label>
+          <select class="form-input" id="inc_status">
+            <option value="investigating">Investigating</option>
+            <option value="identified">Identified</option>
+            <option value="monitoring">Monitoring</option>
+            <option value="resolved">Resolved</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-section-label">Affected Lines</div>
+      <div class="line-picker" id="inc_lines"></div>
+      <div class="form-section-label">Affected Stations / Waypoints</div>
+      <div class="waypoint-picker" id="inc_waypoints"></div>
+      <div id="inc_updateSection" style="display:none">
+        <div class="form-section-label">Post Update</div>
+        <div id="inc_existingUpdates" class="update-timeline" style="display:none"></div>
+        <div class="form-group">
+          <label class="form-label">Update Message</label>
+          <textarea class="form-input" id="inc_updateMsg" placeholder="What's the latest? Leave blank to update status without a message."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('incidentModal')">Cancel</button>
+      <button class="btn btn-blue" onclick="saveIncident()">Save Incident</button>
+    </div>
+  </div>
+</div>
+
+<!-- Maintenance Modal -->
+<div class="modal-overlay" id="maintenanceModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="mntModalTitle">New Maintenance</span>
+      <button class="modal-close" onclick="closeModal('maintenanceModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mnt_id">
+      <div class="form-group">
+        <label class="form-label">Title *</label>
+        <input class="form-input" id="mnt_title" placeholder="e.g. Track replacement on Red Line">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-input" id="mnt_description" placeholder="Details about the maintenance work..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-input" id="mnt_status">
+          <option value="scheduled">Scheduled</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Start Date & Time *</label>
+          <input class="form-input" type="datetime-local" id="mnt_start">
+        </div>
+        <div class="form-group">
+          <label class="form-label">End Date & Time *</label>
+          <input class="form-input" type="datetime-local" id="mnt_end">
+        </div>
+      </div>
+      <div class="form-section-label">Affected Lines</div>
+      <div class="line-picker" id="mnt_lines"></div>
+      <div class="form-section-label">Affected Stations / Waypoints</div>
+      <div class="waypoint-picker" id="mnt_waypoints"></div>
+      <div id="mnt_updateSection" style="display:none">
+        <div class="form-section-label">Post Update</div>
+        <div id="mnt_existingUpdates" class="update-timeline" style="display:none"></div>
+        <div class="form-group">
+          <label class="form-label">Update Message</label>
+          <textarea class="form-input" id="mnt_updateMsg" placeholder="Optional update message..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('maintenanceModal')">Cancel</button>
+      <button class="btn btn-blue" onclick="saveMaintenance()">Save Maintenance</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let token = '';
+let allLines = [];
+let incidents = [];
+let maintenance = [];
+let subscribers = [];
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+function doLogin() {
+  const sec = document.getElementById('loginSecret').value.trim();
+  if (!sec) return;
+  token = sec;
+  // Verify by calling a protected endpoint
+  fetch(`${API_BASE}/api/subscribers`, { headers: { Authorization: `Bearer ${token}` }})
+    .then(r => {
+      if (r.ok) {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('app').style.display = 'flex';
+        localStorage.setItem('adminToken', token);
+        loadAll();
+      } else {
+        document.getElementById('loginErr').style.display = 'block';
+        token = '';
+      }
+    })
+    .catch(() => { document.getElementById('loginErr').style.display = 'block'; token = ''; });
+}
+
+function doLogout() {
+  localStorage.removeItem('adminToken');
+  location.reload();
+}
+
+// Auto-login from storage
+const saved = localStorage.getItem('adminToken');
+if (saved) {
+  token = saved;
+  fetch(`${API_BASE}/api/subscribers`, { headers: { Authorization: `Bearer ${token}` }})
+    .then(r => {
+      if (r.ok) {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('app').style.display = 'flex';
+        loadAll();
+      } else {
+        token = '';
+        localStorage.removeItem('adminToken');
+      }
+    });
+}
+
+// ─── FETCH HELPERS ────────────────────────────────────────────────────────────
+async function api(path, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(`${API_BASE}${path}`, opts);
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+async function loadAll() {
+  try {
+    [allLines, incidents, maintenance, subscribers] = await Promise.all([
+      api('/api/lines'),
+      api('/api/incidents'),
+      api('/api/maintenance'),
+      api('/api/subscribers'),
+    ]);
+    updateNavBadges();
+    renderCurrentTab();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+function updateNavBadges() {
+  document.getElementById('nb-incidents').textContent = incidents.filter(i => i.status !== 'resolved').length;
+  document.getElementById('nb-maintenance').textContent = maintenance.filter(m => m.status !== 'completed' && m.status !== 'cancelled').length;
+  document.getElementById('nb-subs').textContent = subscribers.length;
+}
+
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+let currentTab = 'incidents';
+
+function showTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById(`nav-${tab}`).classList.add('active');
+  renderCurrentTab();
+}
+
+function renderCurrentTab() {
+  const map = { incidents: renderIncidents, maintenance: renderMaintenance, lines: renderLines, subscribers: renderSubscribers };
+  (map[currentTab] || (() => {}))();
+}
+
+// ─── INCIDENTS TAB ────────────────────────────────────────────────────────────
+function renderIncidents() {
+  const active = incidents.filter(i => i.status !== 'resolved');
+  const resolved = incidents.filter(i => i.status === 'resolved').slice(0, 10);
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Incidents</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:2px">${active.length} active · ${incidents.length} total</div>
+      </div>
+      <button class="btn btn-blue" onclick="openIncidentModal()">+ New Incident</button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value" style="color:var(--critical)">${active.length}</div>
+        <div class="stat-label">Active Incidents</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="color:var(--major)">${incidents.filter(i=>i.level==='emergency'||i.level==='critical').length}</div>
+        <div class="stat-label">Critical / Emergency</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="color:var(--operational)">${resolved.length}</div>
+        <div class="stat-label">Recently Resolved</div>
+      </div>
+    </div>
+
+    ${active.length ? `
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Active</div>
+      <div class="table-wrap" style="margin-bottom:28px">
+        <table>
+          <thead><tr>
+            <th>Incident</th><th>Level</th><th>Status</th><th>Lines</th><th>Created</th><th>Actions</th>
+          </tr></thead>
+          <tbody>
+            ${active.map(i => incidentRow(i)).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : `<div class="empty"><div class="empty-icon">✅</div><div>No active incidents</div></div>`}
+
+    ${resolved.length ? `
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Recently Resolved</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Incident</th><th>Level</th><th>Lines</th><th>Created</th><th>Actions</th></tr></thead>
+          <tbody>${resolved.map(i => incidentRow(i, true)).join('')}</tbody>
+        </table>
+      </div>
+    ` : ''}
+  `;
+}
+
+function incidentRow(i, resolved = false) {
+  const lineTags = (i.affectedLines || []).map(lid => {
+    const l = allLines.find(x => x.id === lid);
+    return l ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.3);color:${l.color};border:1px solid ${l.color}40;margin-right:4px"><span class="line-dot" style="background:${l.color};width:6px;height:6px;margin-right:0"></span>${l.name}</span>` : lid;
+  }).join('');
+
+  return `
+    <tr>
+      <td><div class="td-title">${i.title}</div><div class="td-desc">${i.description?.slice(0,80) || ''}${i.description?.length > 80 ? '…' : ''}</div></td>
+      <td><span class="badge badge-${i.level}">${i.level}</span></td>
+      <td><span class="badge badge-${i.status}">${i.status.replace('_',' ')}</span></td>
+      <td>${lineTags || '<span style="color:var(--faint);font-size:12px">—</span>'}</td>
+      <td class="td-time">${fmtTime(i.createdAt)}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-ghost btn-sm" onclick="editIncident('${i.id}')">Edit</button>
+        ${!resolved ? `<button class="btn btn-green btn-sm" onclick="quickResolve('${i.id}')">Resolve</button>` : ''}
+        <button class="btn btn-red btn-sm" onclick="deleteIncident('${i.id}')">Delete</button>
+      </div></td>
+    </tr>
+  `;
+}
+
+// ─── MAINTENANCE TAB ──────────────────────────────────────────────────────────
+function renderMaintenance() {
+  const active = maintenance.filter(m => m.status !== 'completed' && m.status !== 'cancelled');
+  const past = maintenance.filter(m => m.status === 'completed' || m.status === 'cancelled').slice(0, 10);
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Maintenance</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:2px">${active.length} scheduled/active · ${maintenance.length} total</div>
+      </div>
+      <button class="btn btn-blue" onclick="openMaintenanceModal()">+ New Maintenance</button>
+    </div>
+
+    ${active.length ? `
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Upcoming / Active</div>
+      <div class="table-wrap" style="margin-bottom:28px">
+        <table>
+          <thead><tr><th>Window</th><th>Status</th><th>Lines</th><th>Start</th><th>End</th><th>Actions</th></tr></thead>
+          <tbody>${active.map(m => maintenanceRow(m)).join('')}</tbody>
+        </table>
+      </div>
+    ` : `<div class="empty"><div class="empty-icon">🔧</div><div>No upcoming maintenance</div></div>`}
+
+    ${past.length ? `
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Past</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Window</th><th>Status</th><th>Lines</th><th>Start</th><th>End</th><th>Actions</th></tr></thead>
+          <tbody>${past.map(m => maintenanceRow(m)).join('')}</tbody>
+        </table>
+      </div>
+    ` : ''}
+  `;
+}
+
+function maintenanceRow(m) {
+  const lineTags = (m.affectedLines || []).map(lid => {
+    const l = allLines.find(x => x.id === lid);
+    return l ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:999px;color:${l.color};border:1px solid ${l.color}40;margin-right:4px">${l.name}</span>` : lid;
+  }).join('');
+
+  return `
+    <tr>
+      <td><div class="td-title">${m.title}</div><div class="td-desc">${m.description?.slice(0,60) || ''}…</div></td>
+      <td><span class="badge badge-${m.status}">${m.status.replace('_', ' ')}</span></td>
+      <td>${lineTags || '—'}</td>
+      <td class="td-time">${fmtTime(m.startTime)}</td>
+      <td class="td-time">${fmtTime(m.endTime)}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-ghost btn-sm" onclick="editMaintenance('${m.id}')">Edit</button>
+        <button class="btn btn-red btn-sm" onclick="deleteMaintenance('${m.id}')">Delete</button>
+      </div></td>
+    </tr>
+  `;
+}
+
+// ─── LINES TAB ────────────────────────────────────────────────────────────────
+function renderLines() {
+  document.getElementById('mainContent').innerHTML = `
+    <div class="page-header">
+      <div class="page-title">Lines & Stations</div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost" onclick="addLine()">+ Add Line</button>
+        <button class="btn btn-blue" onclick="saveLines()">Save Changes</button>
+      </div>
+    </div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Configure metro lines and their stations/waypoints. These are used when creating incidents and maintenance windows.</div>
+    <div id="linesEditor"></div>
+  `;
+  renderLinesEditor();
+}
+
+function renderLinesEditor() {
+  const el = document.getElementById('linesEditor');
+  el.innerHTML = allLines.map((line, i) => `
+    <div class="line-editor-row">
+      <input type="color" value="${line.color}" class="color-dot" style="background:${line.color}"
+        onchange="allLines[${i}].color=this.value;this.style.background=this.value">
+      <input class="form-input" style="width:160px;flex-shrink:0" value="${line.name}"
+        oninput="allLines[${i}].name=this.value" placeholder="Line name">
+      <div style="flex:1">
+        <div class="wp-tags" id="wpts_${i}">
+          ${(line.waypoints||[]).map((wp, wi) => `
+            <span class="wp-tag">${wp}
+              <span class="wp-tag-del" onclick="removeWaypoint(${i},${wi})">×</span>
+            </span>
+          `).join('')}
+        </div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <input class="form-input" style="flex:1;padding:5px 10px;font-size:12px" id="wpInput_${i}" placeholder="Add station…" onkeydown="if(event.key==='Enter')addWaypoint(${i})">
+          <button class="btn btn-ghost btn-sm" onclick="addWaypoint(${i})">+ Add</button>
+        </div>
+      </div>
+      <button class="btn btn-red btn-sm" onclick="removeLine(${i})">Remove</button>
+    </div>
+  `).join('');
+}
+
+function addLine() {
+  allLines.push({ id: `line_${Date.now()}`, name: 'New Line', color: '#64748b', waypoints: [] });
+  renderLinesEditor();
+}
+
+function removeLine(i) {
+  if (!confirm('Remove this line?')) return;
+  allLines.splice(i, 1);
+  renderLinesEditor();
+}
+
+function addWaypoint(lineIdx) {
+  const input = document.getElementById(`wpInput_${lineIdx}`);
+  const val = input.value.trim();
+  if (!val) return;
+  allLines[lineIdx].waypoints.push(val);
+  input.value = '';
+  renderLinesEditor();
+}
+
+function removeWaypoint(lineIdx, wpIdx) {
+  allLines[lineIdx].waypoints.splice(wpIdx, 1);
+  renderLinesEditor();
+}
+
+async function saveLines() {
+  try {
+    await api('/api/lines', 'POST', { lines: allLines });
+    toast('Lines saved!', 'success');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+// ─── SUBSCRIBERS TAB ──────────────────────────────────────────────────────────
+function renderSubscribers() {
+  document.getElementById('mainContent').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Subscribers</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:2px">${subscribers.length} email subscribers</div>
+      </div>
+    </div>
+    ${subscribers.length ? `
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Email</th><th>Name</th><th>Subscribed</th><th></th></tr></thead>
+          <tbody>
+            ${subscribers.map(s => `
+              <tr>
+                <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${s.email}</td>
+                <td style="color:var(--muted)">${s.name || '—'}</td>
+                <td class="td-time">${fmtDate(s.subscribedAt)}</td>
+                <td><button class="btn btn-red btn-sm" onclick="deleteSubscriber('${encodeURIComponent(s.email)}')">Remove</button></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : `<div class="empty"><div class="empty-icon">📭</div><div>No subscribers yet</div></div>`}
+  `;
+}
+
+async function deleteSubscriber(emailEncoded) {
+  if (!confirm('Remove this subscriber?')) return;
+  try {
+    await api(`/api/subscribers/${emailEncoded}`, 'DELETE');
+    toast('Subscriber removed', 'success');
+    await loadAll();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+// ─── INCIDENT MODAL ───────────────────────────────────────────────────────────
+function openIncidentModal(id = null) {
+  const inc = id ? incidents.find(i => i.id === id) : null;
+  document.getElementById('incidentModalTitle').textContent = inc ? 'Edit Incident' : 'New Incident';
+  document.getElementById('inc_id').value = inc?.id || '';
+  document.getElementById('inc_title').value = inc?.title || '';
+  document.getElementById('inc_description').value = inc?.description || '';
+  document.getElementById('inc_level').value = inc?.level || 'minor';
+  document.getElementById('inc_status').value = inc?.status || 'investigating';
+
+  // Line picker
+  renderLinePicker('inc_lines', inc?.affectedLines || [], 'inc');
+  renderWaypointPicker('inc_waypoints', inc?.affectedLines || [], inc?.affectedWaypoints || []);
+
+  const updateSection = document.getElementById('inc_updateSection');
+  const existingUpdates = document.getElementById('inc_existingUpdates');
+  if (inc) {
+    updateSection.style.display = 'block';
+    document.getElementById('inc_updateMsg').value = '';
+    if (inc.updates?.length) {
+      existingUpdates.style.display = 'block';
+      existingUpdates.innerHTML = inc.updates.slice().reverse().map(u => `
+        <div class="ut-entry">
+          <span class="ut-time">${fmtTime(u.timestamp)}</span>
+          <span class="badge badge-${u.status}" style="flex-shrink:0">${u.status}</span>
+          <span class="ut-msg">${u.message}</span>
+        </div>
+      `).join('');
+    } else {
+      existingUpdates.style.display = 'none';
+    }
+  } else {
+    updateSection.style.display = 'none';
+  }
+
+  openModal('incidentModal');
+}
+
+function editIncident(id) { openIncidentModal(id); }
+
+async function saveIncident() {
+  const id = document.getElementById('inc_id').value;
+  const body = {
+    title: document.getElementById('inc_title').value.trim(),
+    description: document.getElementById('inc_description').value.trim(),
+    level: document.getElementById('inc_level').value,
+    status: document.getElementById('inc_status').value,
+    affectedLines: getSelectedLines('inc_lines'),
+    affectedWaypoints: getSelectedWaypoints('inc_waypoints'),
+    updateMessage: document.getElementById('inc_updateMsg')?.value?.trim() || undefined,
+  };
+
+  if (!body.title) return toast('Title is required', 'error');
+
+  try {
+    if (id) {
+      await api(`/api/incidents/${id}`, 'PUT', body);
+      toast('Incident updated', 'success');
+    } else {
+      await api('/api/incidents', 'POST', body);
+      toast('Incident created — subscribers notified', 'success');
+    }
+    closeModal('incidentModal');
+    await loadAll();
+    renderIncidents();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function quickResolve(id) {
+  if (!confirm('Mark this incident as resolved?')) return;
+  try {
+    await api(`/api/incidents/${id}`, 'PUT', { status: 'resolved', updateMessage: 'This incident has been resolved.' });
+    toast('Incident resolved', 'success');
+    await loadAll();
+    renderIncidents();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function deleteIncident(id) {
+  if (!confirm('Delete this incident? This cannot be undone.')) return;
+  try {
+    await api(`/api/incidents/${id}`, 'DELETE');
+    toast('Incident deleted', 'success');
+    await loadAll();
+    renderIncidents();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+// ─── MAINTENANCE MODAL ────────────────────────────────────────────────────────
+function openMaintenanceModal(id = null) {
+  const m = id ? maintenance.find(x => x.id === id) : null;
+  document.getElementById('mntModalTitle').textContent = m ? 'Edit Maintenance' : 'New Maintenance';
+  document.getElementById('mnt_id').value = m?.id || '';
+  document.getElementById('mnt_title').value = m?.title || '';
+  document.getElementById('mnt_description').value = m?.description || '';
+  document.getElementById('mnt_status').value = m?.status || 'scheduled';
+  document.getElementById('mnt_start').value = m?.startTime ? toLocalDT(m.startTime) : '';
+  document.getElementById('mnt_end').value = m?.endTime ? toLocalDT(m.endTime) : '';
+
+  renderLinePicker('mnt_lines', m?.affectedLines || [], 'mnt');
+  renderWaypointPicker('mnt_waypoints', m?.affectedLines || [], m?.affectedWaypoints || []);
+
+  const updateSection = document.getElementById('mnt_updateSection');
+  const existingUpdates = document.getElementById('mnt_existingUpdates');
+  if (m) {
+    updateSection.style.display = 'block';
+    document.getElementById('mnt_updateMsg').value = '';
+    if (m.updates?.length) {
+      existingUpdates.style.display = 'block';
+      existingUpdates.innerHTML = m.updates.slice().reverse().map(u => `
+        <div class="ut-entry">
+          <span class="ut-time">${fmtTime(u.timestamp)}</span>
+          <span class="ut-msg">${u.message}</span>
+        </div>
+      `).join('');
+    } else {
+      existingUpdates.style.display = 'none';
+    }
+  } else {
+    updateSection.style.display = 'none';
+  }
+
+  openModal('maintenanceModal');
+}
+
+function editMaintenance(id) { openMaintenanceModal(id); }
+
+async function saveMaintenance() {
+  const id = document.getElementById('mnt_id').value;
+  const body = {
+    title: document.getElementById('mnt_title').value.trim(),
+    description: document.getElementById('mnt_description').value.trim(),
+    status: document.getElementById('mnt_status').value,
+    startTime: document.getElementById('mnt_start').value ? new Date(document.getElementById('mnt_start').value).toISOString() : null,
+    endTime: document.getElementById('mnt_end').value ? new Date(document.getElementById('mnt_end').value).toISOString() : null,
+    affectedLines: getSelectedLines('mnt_lines'),
+    affectedWaypoints: getSelectedWaypoints('mnt_waypoints'),
+    updateMessage: document.getElementById('mnt_updateMsg')?.value?.trim() || undefined,
+  };
+
+  if (!body.title) return toast('Title is required', 'error');
+  if (!id && (!body.startTime || !body.endTime)) return toast('Start and end times are required', 'error');
+
+  try {
+    if (id) {
+      await api(`/api/maintenance/${id}`, 'PUT', body);
+      toast('Maintenance updated', 'success');
+    } else {
+      await api('/api/maintenance', 'POST', body);
+      toast('Maintenance created — subscribers notified', 'success');
+    }
+    closeModal('maintenanceModal');
+    await loadAll();
+    renderMaintenance();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function deleteMaintenance(id) {
+  if (!confirm('Delete this maintenance window?')) return;
+  try {
+    await api(`/api/maintenance/${id}`, 'DELETE');
+    toast('Maintenance deleted', 'success');
+    await loadAll();
+    renderMaintenance();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+// ─── LINE / WAYPOINT PICKERS ──────────────────────────────────────────────────
+function renderLinePicker(containerId, selected, prefix) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = allLines.map(line => `
+    <div class="line-pick-item ${selected.includes(line.id) ? 'selected' : ''}"
+      style="color:${selected.includes(line.id) ? 'white' : line.color};background:${selected.includes(line.id) ? line.color : 'var(--bg)'};border-color:${line.color}"
+      onclick="toggleLine('${containerId}','${line.id}','${prefix}')">
+      <span class="line-dot" style="background:${selected.includes(line.id) ? 'white' : line.color}"></span>
+      ${line.name}
+    </div>
+  `).join('');
+}
+
+function toggleLine(containerId, lineId, prefix) {
+  const el = document.getElementById(containerId);
+  const items = el.querySelectorAll('.line-pick-item');
+  const selected = getSelectedLines(containerId);
+  const idx = selected.indexOf(lineId);
+  if (idx === -1) selected.push(lineId);
+  else selected.splice(idx, 1);
+
+  renderLinePicker(containerId, selected, prefix);
+  renderWaypointPicker(`${prefix}_waypoints`, selected, getSelectedWaypoints(`${prefix}_waypoints`));
+}
+
+function renderWaypointPicker(containerId, selectedLines, selectedWps) {
+  const container = document.getElementById(containerId);
+  const waypoints = [...new Set(allLines.filter(l => selectedLines.includes(l.id)).flatMap(l => l.waypoints || []))];
+
+  if (!waypoints.length) {
+    container.innerHTML = '<span style="font-size:12px;color:var(--faint)">Select lines first to see available stations.</span>';
+    return;
+  }
+
+  container.innerHTML = waypoints.map(wp => `
+    <div class="wp-item ${selectedWps.includes(wp) ? 'selected' : ''}"
+      onclick="toggleWaypoint('${containerId}','${wp.replace(/'/g,"\\'")}')">
+      ${wp}
+    </div>
+  `).join('');
+}
+
+function toggleWaypoint(containerId, wp) {
+  const container = document.getElementById(containerId);
+  const items = container.querySelectorAll('.wp-item');
+  items.forEach(el => { if (el.textContent.trim() === wp) el.classList.toggle('selected'); });
+}
+
+function getSelectedLines(containerId) {
+  return [...document.getElementById(containerId).querySelectorAll('.line-pick-item.selected')]
+    .map(el => {
+      const name = el.textContent.trim().replace(/•\s*/, '');
+      return allLines.find(l => l.name === name)?.id || '';
+    }).filter(Boolean);
+}
+
+function getSelectedWaypoints(containerId) {
+  return [...document.getElementById(containerId).querySelectorAll('.wp-item.selected')]
+    .map(el => el.textContent.trim());
+}
+
+// ─── MODAL HELPERS ────────────────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = 'default') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 3000);
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function fmtTime(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function toLocalDT(iso) {
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+</script>
+</body>
+</html>

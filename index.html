@@ -12,7 +12,8 @@
      CONFIG — change the API URL to your deployed Cloudflare Worker
      ═══════════════════════════════════════════════════════════════════ -->
 <script>
-  const API_BASE = 'https://metro-alerts.felixfeger46.workers.dev/';
+  // Paste your Worker URL below — trailing slash is removed automatically
+  const API_BASE = 'https://metro-alerts.felixfeger46.workers.dev'.replace(/\/+$/, '');
 </script>
 
 <style>

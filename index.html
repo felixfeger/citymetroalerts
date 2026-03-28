@@ -811,7 +811,8 @@ const STATUS_LABELS = {
   major_outage:   'Major Service Disruption',
   critical:       'Critical Service Outage',
   emergency:      'Emergency — Severe Disruption',
-  maintenance:    'Scheduled Maintenance in Progress',
+  maintenance:    'Upcoming Scheduled Maintenance',
+  maintenance_active: 'Maintenance In Progress',
 };
 
 const STATUS_DESCS = {
@@ -821,7 +822,8 @@ const STATUS_DESCS = {
   major_outage:   'Significant disruptions affecting multiple services.',
   critical:       'Critical failure. Services are severely impacted.',
   emergency:      'Emergency condition. Please follow official guidance.',
-  maintenance:    'Planned maintenance is currently underway.',
+  maintenance:    'Maintenance has been scheduled. Services may be affected during the window.',
+  maintenance_active: 'Planned maintenance is currently underway. Services may be disrupted.',
 };
 
 const LEVEL_LABELS = { minor: 'Minor', major: 'Major', critical: 'Critical', emergency: 'Emergency' };
@@ -875,11 +877,16 @@ async function loadAll() {
 
 // ─── RENDER STATUS ───────────────────────────────────────────────────────────
 function renderStatus(s) {
-  const st = s.overall || 'operational';
+  // If overall is 'maintenance' but there are active (in_progress) windows, show active label
+  let st = s.overall || 'operational';
+  if (st === 'maintenance' && s.activeMaintenance > 0) st = 'maintenance_active';
+
   const banner = $('statusBanner');
-  banner.className = `status-banner ${st}`;
-  $('statusDot').className = `status-dot ${st}`;
-  $('statusLabel').className = `status-label ${st}`;
+  // Use 'maintenance' CSS class for both scheduled and active maintenance styling
+  const cssClass = st.startsWith('maintenance') ? 'maintenance' : st;
+  banner.className = `status-banner ${cssClass}`;
+  $('statusDot').className = `status-dot ${cssClass}`;
+  $('statusLabel').className = `status-label ${cssClass}`;
   $('statusLabel').textContent = STATUS_LABELS[st] || st;
   $('statusDesc').textContent = STATUS_DESCS[st] || '';
 }
